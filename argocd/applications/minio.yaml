@@ -1,0 +1,41 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: minio
+  namespace: infra-tools
+spec:
+  project: default
+  source:
+    repoURL: https://charts.min.io/
+    chart: minio
+    targetRevision: 5.4.0
+    helm:
+      releaseName: minio
+      valuesObject:
+        rootUser: minio
+        rootPassword: minio123
+        buckets:
+          - name: mlflow-artifacts
+            policy: none
+            purge: false
+        mode: standalone
+        persistence:
+          enabled: false
+        service:
+          type: ClusterIP
+          port: "9000"
+        consoleService:
+          type: ClusterIP
+          port: "9001"
+        resources:
+          requests:
+            memory: 256Mi
+  destination:
+    namespace: application
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

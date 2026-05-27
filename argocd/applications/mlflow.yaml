@@ -1,0 +1,58 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mlflow
+  namespace: infra-tools
+spec:
+  project: default
+  source:
+    repoURL: https://community-charts.github.io/helm-charts
+    chart: mlflow
+    targetRevision: 1.8.1
+    helm:
+      releaseName: mlflow
+      valuesObject:
+        service:
+          type: ClusterIP
+          port: 5000
+          containerPort: 5000
+
+        ingress:
+          enabled: false
+
+        backendStore:
+          postgres:
+            enabled: true
+            host: mlflow-postgres-postgresql.application.svc.cluster.local
+            port: 5432
+            database: mlflow
+            user: mlflow
+            password: mlflowpass
+
+        artifactRoot:
+          proxiedArtifactStorage: true
+          s3:
+            enabled: true
+            bucket: mlflow-artifacts
+            awsAccessKeyId: minio
+            awsSecretAccessKey: minio123
+
+        extraEnvVars:
+          MLFLOW_S3_ENDPOINT_URL: "http://minio.application.svc.cluster.local:9000"
+          MLFLOW_S3_IGNORE_TLS: "true"
+
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            memory: 1Gi
+  destination:
+    namespace: application
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
